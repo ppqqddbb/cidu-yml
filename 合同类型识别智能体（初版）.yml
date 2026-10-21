@@ -1,0 +1,663 @@
+app:
+  description: 上传合同文件（DOC/DOCX 走文档提取；PDF/JPG/PNG 走 PaddleOCR），由大模型输出合同类型 JSON，供前端自动选择。
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 合同类型识别智能体（初版）
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: package
+  value:
+    plugin_unique_identifier: user/paddleocr-local-plugin:0.1.0@1f76f949676eb62a8f778e2463800ebb38ef1999d30d43b518d94946ceba530a
+    version: null
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .DOC
+      - .DOCX
+      - .PDF
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .doc
+      - .docx
+      - .pdf
+      - .jpg
+      - .jpeg
+      - .png
+      allowed_file_types:
+      - image
+      - document
+      allowed_file_upload_methods:
+      - remote_url
+      - local_file
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 200
+        batch_count_limit: 10
+        file_size_limit: 200
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 200
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 200
+        workflow_file_upload_limit: 200
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 1
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: if-else
+      id: start_to_route
+      source: start_node
+      sourceHandle: source
+      target: file_route_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: tool
+      id: route_to_ocr
+      source: file_route_node
+      sourceHandle: ocr_case
+      target: ocr_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+      id: route_to_doc
+      source: file_route_node
+      sourceHandle: doc_case
+      target: doc_extract_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: route_to_err
+      source: file_route_node
+      sourceHandle: 'false'
+      target: unsupported_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: tool
+        targetType: code
+      id: ocr_to_merge
+      source: ocr_node
+      sourceHandle: source
+      target: merge_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: code
+      id: doc_to_merge
+      source: doc_extract_node
+      sourceHandle: source
+      target: merge_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: merge_to_llm
+      source: merge_node
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: answer
+      id: llm_to_answer
+      source: llm
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+      height: 72
+      id: start_node
+      position:
+        x: 40
+        y: 280
+      positionAbsolute:
+        x: 40
+        y: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        cases:
+        - case_id: ocr_case
+          conditions:
+          - comparison_operator: contains
+            id: ocr_case_file_cond
+            sub_variable_condition:
+              case_id: ocr_case_sub
+              conditions:
+              - comparison_operator: contains
+                id: ocr_case_ext_0
+                key: name
+                value: .PDF
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_1
+                key: name
+                value: .pdf
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_2
+                key: name
+                value: .JPG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_3
+                key: name
+                value: .jpg
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_4
+                key: name
+                value: .JPEG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_5
+                key: name
+                value: .jpeg
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_6
+                key: name
+                value: .PNG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_7
+                key: name
+                value: .png
+                varType: string
+              logical_operator: or
+            value: ''
+            varType: array[file]
+            variable_selector:
+            - sys
+            - files
+          id: ocr_case
+          logical_operator: or
+        - case_id: doc_case
+          conditions:
+          - comparison_operator: contains
+            id: doc_case_file_cond
+            sub_variable_condition:
+              case_id: doc_case_sub
+              conditions:
+              - comparison_operator: contains
+                id: doc_case_ext_0
+                key: name
+                value: .DOCX
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_1
+                key: name
+                value: .docx
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_2
+                key: name
+                value: .DOC
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_3
+                key: name
+                value: .doc
+                varType: string
+              logical_operator: or
+            value: ''
+            varType: array[file]
+            variable_selector:
+            - sys
+            - files
+          id: doc_case
+          logical_operator: or
+        selected: false
+        title: 文件类型分流
+        type: if-else
+      height: 459
+      id: file_route_node
+      position:
+        x: 340
+        y: 240
+      positionAbsolute:
+        x: 340
+        y: 240
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        is_team_authorization: true
+        paramSchemas:
+        - auto_generate: null
+          default: null
+          form: form
+          human_description:
+            en_US: Authentication token for PaddleOCR cloud API.
+            ja_JP: Authentication token for PaddleOCR cloud API.
+            pt_BR: Authentication token for PaddleOCR cloud API.
+            zh_Hans: PaddleOCR 云端 API 的认证令牌。
+          label:
+            en_US: PaddleOCR Token
+            ja_JP: PaddleOCR Token
+            pt_BR: PaddleOCR Token
+            zh_Hans: PaddleOCR 令牌
+          llm_description: Authentication token for PaddleOCR API.
+          max: null
+          min: null
+          name: paddleocr_token
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: secret-input
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            ja_JP: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            pt_BR: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            zh_Hans: 上传文件（PDF、PNG、JPG、DOC、DOCX）进行 OCR 识别。
+          label:
+            en_US: File to OCR
+            ja_JP: File to OCR
+            pt_BR: File to OCR
+            zh_Hans: 待识别文件
+          llm_description: File to upload for OCR processing.
+          max: null
+          min: null
+          name: file
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: file
+        params:
+          file: ''
+          paddleocr_token: ''
+        plugin_id: user/paddleocr-local-plugin
+        plugin_unique_identifier: user/paddleocr-local-plugin:0.1.0@1f76f949676eb62a8f778e2463800ebb38ef1999d30d43b518d94946ceba530a
+        provider_icon: http://ciduai.daneng.cc/console/api/workspaces/current/plugin/icon?tenant_id=66edc05c-24c6-443b-bdd6-a9a4a01bf67c&filename=061877fb1cb057574c964ac4c04f1bd0f8b9c31be6815bb321d252af1d7778da.svg
+        provider_id: user/paddleocr-local-plugin/paddleocr_local
+        provider_name: user/paddleocr-local-plugin/paddleocr_local
+        provider_type: builtin
+        selected: false
+        title: PaddleOCR云端识别
+        tool_configurations:
+          paddleocr_token:
+            type: mixed
+            value: a0c80577924bfa928bc9ad6fd0a1ca28d4894700
+        tool_description: 调用 PaddleOCR 云端 API 识别文件（PDF、PNG、JPG、DOC、DOCX）并返回 markdown
+          内容。
+        tool_label: PaddleOCR云端识别
+        tool_name: paddleocr_local
+        tool_node_version: '2'
+        tool_parameters:
+          file:
+            type: variable
+            value:
+            - sys
+            - files
+        type: tool
+      height: 87
+      id: ocr_node
+      position:
+        x: 680
+        y: 120
+      positionAbsolute:
+        x: 680
+        y: 120
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        desc: DOC/DOCX 文件走文档提取器
+        is_array_file: true
+        selected: false
+        title: 文档提取器
+        type: document-extractor
+        variable_selector:
+        - sys
+        - files
+      height: 131
+      id: doc_extract_node
+      position:
+        x: 680
+        y: 320
+      positionAbsolute:
+        x: 680
+        y: 320
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        code: "import json\n\ndef _pick_text(raw):\n    text = str(raw or \"\").strip()\n\
+          \    if not text:\n        return \"\"\n    try:\n        data = json.loads(text)\n\
+          \    except Exception:\n        return text\n    if isinstance(data, dict):\n\
+          \        for key in (\"markdown_content\", \"markdown\", \"text\", \"content\"\
+          , \"result\", \"output\"):\n            value = data.get(key)\n        \
+          \    if isinstance(value, str) and value.strip():\n                return\
+          \ value.strip()\n        return text\n    if isinstance(data, list):\n \
+          \       parts = []\n        for item in data:\n            picked = _pick_text(json.dumps(item,\
+          \ ensure_ascii=False))\n            if picked:\n                parts.append(picked)\n\
+          \        return \"\\n\".join(parts).strip()\n    return text\n\ndef main(ocr_text:\
+          \ str = \"\", doc_text: str = \"\") -> dict:\n    ocr_value = _pick_text(ocr_text)\n\
+          \    doc_value = _pick_text(doc_text)\n    recognized_text = ocr_value or\
+          \ doc_value\n    recognized_source = \"ocr\" if ocr_value else (\"doc\"\
+          \ if doc_value else \"none\")\n    return {\n        \"recognized_text\"\
+          : recognized_text,\n        \"recognized_source\": recognized_source,\n\
+          \    }"
+        code_language: python3
+        desc: 统一解析 OCR 与文档提取器输出。
+        outputs:
+          recognized_source:
+            children: null
+            type: string
+          recognized_text:
+            children: null
+            type: string
+        selected: false
+        title: 识别文本合并
+        type: code
+        variables:
+        - value_selector:
+          - ocr_node
+          - text
+          variable: ocr_text
+        - value_selector:
+          - doc_extract_node
+          - text
+          variable: doc_text
+      height: 79
+      id: merge_node
+      position:
+        x: 980
+        y: 220
+      positionAbsolute:
+        x: 980
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        memory:
+          query_prompt_template: '请根据以下合同正文判断合同类型，只输出 JSON：
+
+
+            {{#merge_node.recognized_text#}}
+
+
+            {{#sys.query#}}
+
+            '
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+        prompt_template:
+        - id: 638dbb6b-e0ec-4866-8f98-371c76996a74
+          role: system
+          text: "你是一名资深合同类型识别与法律条文匹配助手，专门依据《中华人民共和国民法典》第三编“合同”第二分编“典型合同”（第595条至第978条）对合同文本、合同条款或合同描述进行类型识别。\n\
+            \n【输入】用户会提供一份合同文本、合同条款或合同描述。\n\n【任务】识别该合同属于《中华人民共和国民法典》第三编第二分编“典型合同”中的哪一类或哪几类典型合同。\n\
+            \n【识别要求】\n1. 必须进行多标签识别。如果同一合同文本中同时包含多个典型合同关系的条文特征，应全部输出，不得只输出一个。\n2. 例如：同时包含买卖合同特征和供用电、水、气、热力合同特征的，应识别为“买卖合同”和“供用电、水、气、热力合同”两个合同类型。\n\
+            3. 如果某一合同关系同时符合一般类型与特殊类型（如承揽合同与建设工程合同、保管合同与仓储合同、委托合同与中介合同等），应优先识别特殊类型；但如果文本中同时存在多个相互独立的合同关系，则仍应输出多个类型。\n\
+            4. 识别时应当以合同文本中的具体表述为基础，逐类对照下方“典型合同识别知识库”中的条文特征，判断是否命中该合同类型的定义、主要内容条款、当事人主要权利义务或者特有法律规则。\n\
+            5. 如果同一合同文本中包括多个合同类型的法律条文特征，应当在输出中分别列出每个合同类型，并分别说明匹配条文和匹配理由。\n\n【输出格式】\n\
+            请严格按照以下格式输出：\n\n1. 合同类型：________\n   匹配条文：第X条、第X条\n   匹配理由：________\n\n\
+            2. 合同类型：________\n   匹配条文：第X条、第X条\n   匹配理由：________\n\n如有多个合同类型，依此类推。不得遗漏。\n\
+            \n【典型合同识别知识库】\n\n一、买卖合同\n包括：\n- 第595条：买卖合同是出卖人转移标的物的所有权于买受人，买受人支付价款的合同。\n\
+            - 第596条：买卖合同的内容一般包括标的物的名称、数量、质量、价款、履行期限、履行地点和方式、包装方式、检验标准和方法、结算方式、合同使用的文字及其效力等条款。\n\
+            - 第597条：因出卖人未取得处分权致使标的物所有权不能转移的，买受人可以解除合同并请求出卖人承担违约责任。\n- 第598条：出卖人应当履行向买受人交付标的物或者交付提取标的物的单证，并转移标的物所有权的义务。\n\
+            - 第604条：标的物毁损、灭失的风险，交付前由出卖人承担，交付后由买受人承担，但法律另有规定或者当事人另有约定的除外。\n- 第615条：出卖人应当按照约定的质量要求交付标的物。\n\
+            - 第626条：买受人应当按照约定的数额和支付方式支付价款。\n- 第630条：标的物交付之前产生的孳息归出卖人，交付之后产生的孳息归买受人，但当事人另有约定的除外。\n\
+            - 第634条：分期付款的买受人未支付到期价款的数额达到全部价款的五分之一，经催告后在合理期限内仍未支付到期价款的，出卖人可以请求买受人支付全部价款或者解除合同。\n\
+            - 第637条、第638条：试用买卖合同中，买受人可以购买，也可以拒绝购买；试用期限届满，买受人对是否购买未作表示的，视为购买。\n\n二、供用电、水、气、热力合同\n\
+            包括：\n- 第648条：供用电合同是供电人向用电人供电，用电人支付电费的合同。\n- 第649条：供用电合同的内容一般包括供电的方式、质量、时间，用电容量、地址、性质，计量方式，电价、电费的结算方式，供用电设施的维护责任等条款。\n\
+            - 第651条：供电人应当按照国家规定的供电质量标准和约定安全供电。\n- 第652条：供电人因检修、依法限电等原因需要中断供电时，应当按照国家有关规定事先通知用电人。\n\
+            - 第654条：用电人应当按照国家有关规定和当事人的约定及时支付电费；用电人逾期不支付电费的，应当支付违约金。\n- 第655条：用电人应当按照国家有关规定和当事人的约定安全、节约和计划用电。\n\
+            - 第656条：供用水、供用气、供用热力合同，参照适用供用电合同的有关规定。\n\n三、赠与合同\n包括：\n- 第657条：赠与合同是赠与人将自己的财产无偿给予受赠人，受赠人表示接受赠与的合同。\n\
+            - 第658条：赠与人在赠与财产的权利转移之前可以撤销赠与，但经过公证的赠与合同或者依法不得撤销的具有救灾、扶贫、助残等公益、道德义务性质的赠与合同除外。\n\
+            - 第660条：经过公证的赠与合同或者具有公益、道德义务性质的赠与合同，赠与人不交付赠与财产的，受赠人可以请求交付。\n- 第661条：附义务赠与中，受赠人应当按照约定履行义务。\n\
+            - 第662条：赠与的财产有瑕疵的，赠与人不承担责任；但附义务的赠与，赠与人应当在附义务的限度内承担与出卖人相同的责任；赠与人故意不告知瑕疵或者保证无瑕疵，造成受赠人损失的，应当承担赔偿责任。\n\
+            - 第663条：受赠人有严重侵害赠与人或者赠与人近亲属合法权益、对赠与人有扶养义务而不履行、不履行赠与合同约定义务等情形的，赠与人可以撤销赠与。\n\
+            - 第666条：赠与人的经济状况显著恶化，严重影响其生产经营或者家庭生活的，可以不再履行赠与义务。\n\n四、借款合同\n包括：\n- 第667条：借款合同是借款人向贷款人借款，到期返还借款并支付利息的合同。\n\
+            - 第668条：借款合同的内容一般包括借款种类、币种、用途、数额、利率、期限和还款方式等条款。\n- 第670条：借款的利息不得预先在本金中扣除；利息预先在本金中扣除的，应当按照实际借款数额返还借款并计算利息。\n\
+            - 第679条：自然人之间的借款合同，自贷款人提供借款时成立。\n- 第680条：禁止高利放贷，借款的利率不得违反国家有关规定；借款合同对支付利息没有约定的，视为没有利息。\n\
+            - 第674条：借款人应当按照约定的期限支付利息。\n- 第676条：借款人未按照约定的期限返还借款的，应当按照约定或者国家有关规定支付逾期利息。\n\
+            - 第677条：借款人提前返还借款的，除当事人另有约定外，应当按照实际借款的期间计算利息。\n\n五、保证合同\n包括：\n- 第681条：保证合同是为保障债权的实现，保证人和债权人约定，当债务人不履行到期债务或者发生当事人约定的情形时，保证人履行债务或者承担责任的合同。\n\
+            - 第682条：保证合同是主债权债务合同的从合同，主债权债务合同无效的，保证合同无效，但法律另有规定的除外。\n- 第684条：保证合同的内容一般包括被保证的主债权种类、数额，债务人履行债务的期限，保证的方式、范围和期间等条款。\n\
+            - 第686条：保证的方式包括一般保证和连带责任保证；当事人在保证合同中对保证方式没有约定或者约定不明确的，按照一般保证承担保证责任。\n\
+            - 第687条：一般保证的保证人享有先诉抗辩权，但法律另有规定的除外。\n- 第688条：连带责任保证的债务人不履行到期债务或者发生当事人约定的情形时，债权人可以请求债务人履行债务，也可以请求保证人在其保证范围内承担保证责任。\n\
+            - 第691条：保证的范围包括主债权及其利息、违约金、损害赔偿金和实现债权的费用；当事人另有约定的，按照其约定。\n- 第692条：债权人与保证人可以约定保证期间；没有约定或者约定不明确的，保证期间为主债务履行期限届满之日起六个月。\n\
+            - 第696条：债权人转让全部或者部分债权，未通知保证人的，该转让对保证人不发生效力。\n\n六、租赁合同\n包括：\n- 第703条：租赁合同是出租人将租赁物交付承租人使用、收益，承租人支付租金的合同。\n\
+            - 第704条：租赁合同的内容一般包括租赁物的名称、数量、用途、租赁期限、租金及其支付期限和方式、租赁物维修等条款。\n- 第705条：租赁期限不得超过二十年；超过二十年的，超过部分无效。\n\
+            - 第707条：租赁期限六个月以上的，应当采用书面形式；当事人未采用书面形式，无法确定租赁期限的，视为不定期租赁。\n- 第712条：出租人应当履行租赁物的维修义务，但当事人另有约定的除外。\n\
+            - 第716条：承租人经出租人同意，可以将租赁物转租给第三人。\n- 第721条：承租人应当按照约定的期限支付租金。\n- 第725条：租赁物在承租人按照租赁合同占有期限内发生所有权变动的，不影响租赁合同的效力。\n\
+            - 第726条：出租人出卖租赁房屋的，应当在出卖之前的合理期限内通知承租人，承租人享有以同等条件优先购买的权利。\n- 第734条：租赁期限届满，承租人继续使用租赁物，出租人没有提出异议的，原租赁合同继续有效，但是租赁期限为不定期。\n\
+            \n七、融资租赁合同\n包括：\n- 第735条：融资租赁合同是出租人根据承租人对出卖人、租赁物的选择，向出卖人购买租赁物，提供给承租人使用，承租人支付租金的合同。\n\
+            - 第736条：融资租赁合同的内容一般包括租赁物的名称、数量、规格、技术性能、检验方法，租赁期限，租金构成及其支付期限和方式、币种，租赁期限届满租赁物的归属等条款。\n\
+            - 第737条：当事人以虚构租赁物方式订立的融资租赁合同无效。\n- 第745条：出租人对租赁物享有所有权，未经登记，不得对抗善意第三人。\n\
+            - 第747条：租赁物不符合约定或者不符合使用目的的，出租人不承担责任，但承租人依赖出租人的技能确定租赁物或者出租人干预选择租赁物的除外。\n\
+            - 第751条：承租人占有租赁物期间，租赁物毁损、灭失的风险由承租人承担。\n- 第752条：承租人未按照约定支付租金，经催告后在合理期限内仍不支付租金的，出租人可以请求支付全部租金或者解除合同，收回租赁物。\n\
+            - 第757条：出租人和承租人可以约定租赁期限届满租赁物的归属；没有约定或者约定不明确的，租赁物的所有权归出租人。\n\n八、保理合同\n\
+            包括：\n- 第761条：保理合同是应收账款债权人将现有的或者将有的应收账款转让给保理人，保理人提供资金融通、应收账款管理或者催收、应收账款债务人付款保证等服务的合同。\n\
+            - 第762条：保理合同的内容一般包括业务类型、服务范围、应收账款信息、保理融资款或者服务报酬及其支付方式等条款。\n- 第764条：保理人向应收账款债务人发出应收账款转让通知的，应当表明保理人身份并附有必要凭证。\n\
+            - 第766条：有追索权保理合同中，保理人可以向应收账款债权人主张返还保理融资款本息或者回购应收账款债权，也可以向应收账款债务人主张应收账款债权。\n\
+            - 第767条：无追索权保理合同中，保理人应当向应收账款债务人主张应收账款债权，保理人取得超过保理融资款本息和相关费用的部分，无需向应收账款债权人返还。\n\
+            - 第768条：应收账款债权人就同一应收账款订立多个保理合同，致使多个保理人主张权利的，已登记的优先于未登记的取得应收账款；均已登记的，按照登记顺序取得应收账款；均未登记的，由最先到达应收账款债务人的转让通知中载明的保理人取得应收账款。\n\
+            \n九、承揽合同\n包括：\n- 第770条：承揽合同是承揽人按照定作人的要求完成工作，交付工作成果，定作人支付报酬的合同。\n- 第771条：承揽合同的内容一般包括承揽的标的、数量、质量、报酬、承揽方式、材料的提供、履行期限、验收标准和方法等条款。\n\
+            - 第772条：承揽人应当以自己的设备、技术和劳力完成主要工作，但当事人另有约定的除外；承揽人将其承揽的主要工作交由第三人完成的，应当就该第三人完成的工作成果向定作人负责。\n\
+            - 第774条：承揽人提供材料的，应当按照约定选用材料，并接受定作人检验。\n- 第775条：定作人提供材料的，应当按照约定提供材料；承揽人对定作人提供的材料应当及时检验，发现不符合约定时，应当及时通知定作人。\n\
+            - 第780条：承揽人完成的工作成果不符合质量要求的，定作人可以合理选择请求承揽人承担修理、重作、减少报酬、赔偿损失等违约责任。\n- 第782条：定作人应当按照约定的期限支付报酬。\n\
+            - 第783条：定作人未向承揽人支付报酬或者材料费等价款的，承揽人对完成的工作成果享有留置权或者有权拒绝交付。\n- 第787条：定作人在承揽人完成工作前可以随时解除合同，造成承揽人损失的，应当赔偿损失。\n\
+            \n十、建设工程合同\n包括：\n- 第788条：建设工程合同是承包人进行工程建设，发包人支付价款的合同；建设工程合同包括工程勘察、设计、施工合同。\n\
+            - 第789条：建设工程合同应当采用书面形式。\n- 第791条：发包人可以与总承包人订立建设工程合同，也可以分别与勘察人、设计人、施工人订立勘察、设计、施工承包合同；禁止承包人将工程分包给不具备相应资质条件的单位，禁止分包单位将其承包的工程再分包。\n\
+            - 第794条：勘察、设计合同的内容一般包括提交有关基础资料和概预算等文件的期限、质量要求、费用以及其他协作条件等条款。\n- 第795条：施工合同的内容一般包括工程范围、建设工期、中间交工工程的开工和竣工时间、工程质量、工程造价、技术资料交付时间、材料和设备供应责任、拨款和结算、竣工验收、质量保修范围和质量保证期、相互协作等条款。\n\
+            - 第799条：建设工程竣工经验收合格后，方可交付使用；未经验收或者验收不合格的，不得交付使用。\n- 第800条：建设工程质量不符合约定的，承包人应当承担修理、返工、改建或者减少价款等违约责任。\n\
+            - 第807条：发包人未按照约定支付价款的，承包人可以催告发包人在合理期限内支付价款；发包人逾期不支付的，承包人可以与发包人协议将该工程折价，也可以请求人民法院将该工程依法拍卖，并就工程折价或者拍卖的价款优先受偿。\n\
+            - 第808条：本章没有规定的，适用承揽合同的有关规定。\n\n十一、运输合同\n包括：\n- 第809条：运输合同是承运人将旅客或者货物从起运地点运输到约定地点，旅客、托运人或者收货人支付票款或者运输费用的合同。\n\
+            - 第810条：从事公共运输的承运人不得拒绝旅客、托运人通常、合理的运输要求。\n- 第811条：承运人应当在约定期间或者合理期间内将旅客、货物安全运输到约定地点。\n\
+            - 第812条：承运人应当按照约定的或者通常的运输路线将旅客、货物运输到约定地点。\n- 客运合同相关：第815条，客运合同自承运人向旅客出具客票时成立；第822条，承运人应当对运输过程中旅客的伤亡承担赔偿责任；第824条，承运人应当对旅客行李的毁损、灭失承担赔偿责任。\n\
+            - 货运合同相关：第825条，托运人办理货物运输，应当向承运人准确表明收货人的姓名、名称或者凭指示的收货人，货物的名称、性质、重量、数量，收货地点等有关货物运输的必要情况；第829条，托运人可以在承运人将货物交付收货人之前，要求承运人中止运输、返还货物、变更到达地或者将货物交给其他收货人；第832条，承运人对运输过程中货物的毁损、灭失承担赔偿责任，但承运人证明货物的毁损、灭失是因不可抗力、货物本身自然性质或者合理损耗以及托运人、收货人的过错造成的，不承担赔偿责任。\n\
+            - 多式联运合同相关：第838条，多式联运经营人负责履行或者组织履行多式联运合同，对全程运输享有承运人的权利，承担承运人的义务；第839条，多式联运经营人可以与参加多式联运的各区段承运人就多式联运合同的各区段运输约定相互之间的责任，但该约定不影响多式联运经营人对全程运输承担的义务。\n\
+            \n十二、技术合同\n包括：\n- 第843条：技术合同是当事人就技术开发、转让、许可、咨询或者服务订立的确立相互之间权利和义务的合同。\n\
+            - 第845条：技术合同的内容一般包括项目名称，标的的内容、范围和要求，履行的计划、地点和方式，技术信息、资料的保密，技术成果的归属和收益分配办法，验收标准和方法，名词和术语的解释等条款。\n\
+            - 第851条：技术开发合同是当事人之间就新技术、新产品、新工艺或者新材料及其系统的研究开发所订立的合同，包括委托开发合同和合作开发合同。\n\
+            - 第852条：委托开发合同的委托人应当按照约定支付研究开发经费和报酬，提供技术资料，提出研究开发要求，完成协作事项，接受研究开发成果。\n\
+            - 第853条：合作开发合同的当事人应当按照约定进行投资，包括以技术进行投资，分工参与研究开发工作，协作配合研究开发工作。\n- 第861条：委托开发或者合作开发完成的技术秘密成果的使用权、转让权以及收益分配办法，由当事人约定；没有约定或者约定不明确的，当事人均有使用和转让的权利。\n\
+            - 第862条：技术转让合同是合法拥有技术的权利人，将现有特定的专利、专利申请、技术秘密的相关权利让与他人所订立的合同；技术许可合同是合法拥有技术的权利人，将现有特定的专利、技术秘密的相关权利许可他人实施、使用所订立的合同。\n\
+            - 第863条：技术转让合同和技术许可合同应当采用书面形式。\n- 第864条：技术咨询合同是当事人一方以技术知识为对方就特定技术项目提供可行性论证、技术预测、专题技术调查、分析评价报告等所订立的合同。\n\
+            - 第865条：技术服务合同是当事人一方以技术知识为对方解决特定技术问题所订立的合同。\n- 第866条：技术咨询合同、技术服务合同履行过程中，受托人利用委托人提供的技术资料和工作条件完成的新的技术成果，属于受托人；委托人利用受托人的工作成果完成的新的技术成果，属于委托人；当事人另有约定的，按照其约定。\n\
+            \n十三、保管合同\n包括：\n- 第888条：保管合同是保管人保管寄存人交付的保管物，并返还该物的合同。\n- 第889条：保管人不得将保管物转交第三人保管，但当事人另有约定的除外；保管人不得使用或者许可第三人使用保管物，但当事人另有约定的除外。\n\
+            - 第890条：保管合同自保管物交付时成立，但当事人另有约定的除外。\n- 第894条：保管人应当妥善保管保管物。\n- 第897条：保管物因保管人保管不善造成毁损、灭失的，保管人应当承担赔偿责任；但是，无偿保管人证明自己没有故意或者重大过失的，不承担赔偿责任。\n\
+            - 第898条：寄存人寄存贵重物品的，应当向保管人声明，由保管人验收或者封存；寄存人未声明的，该物品毁损、灭失后，保管人可以按照一般物品予以赔偿。\n\
+            - 第899条：寄存人可以随时领取保管物。\n- 第901条：当事人对保管费用没有约定或者约定不明确的，视为无偿保管。\n- 第903条：寄存人未按照约定支付保管费或者其他费用的，保管人对保管物享有留置权。\n\
+            \n十四、仓储合同\n包括：\n- 第904条：仓储合同是保管人储存存货人交付的仓储物，存货人支付仓储费的合同。\n- 第905条：仓储合同自保管人和存货人意思表示一致时成立。\n\
+            - 第908条：存货人交付仓储物的，保管人应当给付仓单。\n- 第909条：仓单应当记载存货人的姓名或者名称和住所、仓储物的品种、数量、质量、包装及其件数和标记、仓储物的损耗标准、储存场所、储存期间、仓储费等内容。\n\
+            - 第911条：保管人应当妥善保管仓储物。\n- 第913条：保管人发现仓储物有变质或者损坏的，应当及时通知存货人或者仓单持有人。\n- 第915条：存货人或者仓单持有人可以随时提取仓储物。\n\
+            - 第917条：储存期间届满，存货人或者仓单持有人不提取仓储物的，保管人可以催告其在合理期限内提取；逾期不提取的，保管人可以提存仓储物。\n\
+            - 第918条：储存期间，因保管人保管不善造成仓储物毁损、灭失的，保管人应当承担赔偿责任。\n\n十五、委托合同\n包括：\n- 第919条：委托合同是委托人和受托人约定，由受托人处理委托人事务的合同。\n\
+            - 第920条：委托人可以特别委托受托人处理一项或者数项事务，也可以概括委托受托人处理一切事务。\n- 第921条：委托人应当预付处理委托事务的费用；受托人为处理委托事务垫付的必要费用，委托人应当偿还。\n\
+            - 第922条：受托人应当按照委托人的指示处理委托事务；需要变更委托人指示的，应当经委托人同意。\n- 第923条：受托人应当亲自处理委托事务；经委托人同意，受托人可以转委托。\n\
+            - 第925条：受托人以自己的名义，在委托人的授权范围内与第三人订立的合同，第三人在订立合同时知道受托人与委托人之间的代理关系的，该合同直接约束委托人和第三人。\n\
+            - 第929条：有偿的委托合同，因受托人的过错造成委托人损失的，委托人可以请求赔偿损失；无偿的委托合同，因受托人的故意或者重大过失造成委托人损失的，委托人可以请求赔偿损失。\n\
+            - 第933条：委托人或者受托人可以随时解除委托合同；因解除合同造成对方损失的，应当赔偿损失，但不可归责于该方的事由除外。\n\n十六、物业服务合同\n\
+            包括：\n- 第937条：物业服务合同是物业服务人在物业服务区域内，为业主提供建筑物及其附属设施的维修养护、环境卫生和相关秩序的管理维护等物业服务，业主支付物业费的合同。\n\
+            - 第938条：物业服务合同的内容一般包括服务事项、服务质量、服务费用的标准和收取办法、维修资金的使用、服务用房的管理和使用、服务期限、服务交接等条款。\n\
+            - 第939条：建设单位依法与物业服务人订立的前期物业服务合同，以及业主委员会与业主大会依法选聘的物业服务人订立的物业服务合同，对业主具有法律约束力。\n\
+            - 第940条：业主委员会或者业主与新物业服务人订立的物业服务合同生效后，前期物业服务合同终止。\n- 第941条：物业服务人不得将其应当提供的全部物业服务转委托给第三人，或者将全部物业服务支解后分别转委托给第三人。\n\
+            - 第942条：物业服务人公开作出的有利于业主的服务承诺，为物业服务合同的组成部分。\n- 第944条：业主应当按照约定向物业服务人支付物业费；业主违反约定逾期不支付物业费的，物业服务人可以催告其在合理期限内支付。\n\
+            - 第946条：业主依照法定程序共同决定解聘物业服务人的，可以解除物业服务合同。\n- 第948条：物业服务期限届满后，业主没有依法作出续聘或者另聘物业服务人的决定，物业服务人继续提供物业服务的，原物业服务合同继续有效，但是服务期限为不定期。\n\
+            \n十七、行纪合同\n包括：\n- 第951条：行纪合同是行纪人以自己的名义为委托人从事贸易活动，委托人支付报酬的合同。\n- 第952条：行纪人处理委托事务支出的费用，由行纪人负担，但当事人另有约定的除外。\n\
+            - 第953条：行纪人占有委托物的，应当妥善保管委托物。\n- 第954条：行纪人低于委托人指定的价格卖出或者高于委托人指定的价格买入的，应当经委托人同意；未经委托人同意，行纪人补偿其差额的，该买卖对委托人发生效力。\n\
+            - 第955条：行纪人卖出或者买入具有市场定价的商品，除委托人有相反意思表示外，行纪人自己可以作为买受人或者出卖人。\n- 第958条：行纪人与第三人订立合同的，行纪人对该合同直接享有权利、承担义务。\n\
+            - 第959条：行纪人按照约定买入委托物，委托人逾期不领取的，行纪人可以提存委托物。\n- 第960条：行纪人与第三人订立合同，第三人不履行义务致使委托人受到损害的，行纪人应当承担赔偿责任，但行纪人与委托人另有约定的除外。\n\
+            \n十八、中介合同\n包括：\n- 第961条：中介合同是中介人向委托人报告订立合同的机会或者提供订立合同的媒介服务，委托人支付报酬的合同。\n\
+            - 第962条：中介人应当就有关订立合同的事项向委托人如实报告；中介人故意隐瞒与订立合同有关的重要事实或者提供虚假情况，损害委托人利益的，不得请求支付报酬并应当承担赔偿责任。\n\
+            - 第963条：中介人促成合同成立的，委托人应当按照约定支付报酬；中介活动的费用，由中介人负担。\n- 第964条：中介人未促成合同成立的，不得请求支付报酬；但是，可以按照约定请求委托人支付从事中介活动支出的必要费用。\n\
+            - 第965条：委托人在接受中介人的服务后，利用中介人提供的交易机会或者媒介服务，绕开中介人直接订立合同的，应当向中介人支付报酬。\n- 第966条：本章没有规定的，参照适用委托合同的有关规定。\n\
+            \n十九、合伙合同\n包括：\n- 第967条：合伙合同是两个以上合伙人为了共同的事业目的，订立的共享利益、共担风险的协议。\n- 第968条：合伙人可以用货币、实物、知识产权、土地使用权或者其他财产权利出资，也可以用劳务出资。\n\
+            - 第969条：合伙财产由全体合伙人共有；合伙合同终止前，合伙人不得请求分割合伙财产。\n- 第970条：合伙事务由全体合伙人共同执行；按照合伙合同的约定或者全体合伙人的决定，可以委托一个或者数个合伙人执行合伙事务。\n\
+            - 第971条：合伙人不得因执行合伙事务请求支付报酬，但合伙合同另有约定的除外。\n- 第972条：合伙的利润分配和亏损分担，按照合伙合同的约定办理；没有约定或者约定不明确的，由合伙人协商确定；协商不成的，由合伙人按照实缴出资比例分配、分担；无法确定出资比例的，由合伙人平均分配、分担。\n\
+            - 第973条：合伙人对合伙债务承担连带责任；清偿合伙债务超过自己应当承担份额的合伙人，有权向其他合伙人追偿。\n- 第974条：合伙人向合伙人以外的人转让其在合伙中的财产份额的，须经其他合伙人一致同意，但合伙合同另有约定的除外。\n\
+            - 第975条：合伙人的债权人不得代位行使合伙人在合伙合同中的权利，但可以代位行使合伙人依照合伙合同享有的收益分配请求权。\n- 第978条：合伙合同终止后，合伙财产在支付清算费用和清偿合伙债务后，有剩余财产的，按照合伙合同的约定或者合伙人实缴出资比例等进行分配。\n\
+            \n【特别注意】\n上述条文内容为识别要点和概括，用于合同类型判断。实际适用法律时，应核对《中华人民共和国民法典》正式文本。"
+        selected: false
+        title: 合同类型分类
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: llm
+      position:
+        x: 1280
+        y: 220
+      positionAbsolute:
+        x: 1280
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '{{#llm.text#}}'
+        selected: false
+        title: 直接回复
+        type: answer
+        variables: []
+      height: 101
+      id: answer
+      position:
+        x: 1580
+        y: 220
+      positionAbsolute:
+        x: 1580
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '{"contract_type":"采购合同","confidence_score":0.0,"reasoning":"不支持的文件类型，仅支持
+          doc/docx/pdf/jpg/png","key_indicators":[]}'
+        selected: false
+        title: 不支持类型回复
+        type: answer
+        variables: []
+      height: 147
+      id: unsupported_answer
+      position:
+        x: 680
+        y: 480
+      positionAbsolute:
+        x: 680
+        y: 480
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    viewport:
+      x: -1282.6892421379666
+      y: 196.92167597864162
+      zoom: 0.9189586839976281
+  rag_pipeline_variables: []

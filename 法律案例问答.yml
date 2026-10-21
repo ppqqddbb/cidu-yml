@@ -1,0 +1,124 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: agent-chat
+  name: 法律案例问答
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969
+    version: null
+kind: app
+model_config:
+  agent_mode:
+    enabled: true
+    max_iteration: 10
+    prompt: null
+    strategy: react
+    tools: []
+  annotation_reply:
+    enabled: false
+  chat_prompt_config:
+    prompt:
+    - role: system
+      text: ''
+  completion_prompt_config:
+    conversation_histories_role:
+      assistant_prefix: ''
+      user_prefix: ''
+    prompt:
+      text: ''
+  dataset_configs:
+    datasets:
+      datasets:
+      - dataset:
+          enabled: true
+          id: 28522cdc-67e0-414d-83b1-fada32f48958
+    metadata_filtering_mode: automatic
+    metadata_model_config:
+      completion_params:
+        temperature: 0.7
+      mode: chat
+      name: deepseek-v4-flash
+      provider: langgenius/openai_api_compatible/openai_api_compatible
+    reranking_enable: true
+    reranking_mode: reranking_model
+    reranking_model:
+      reranking_model_name: Qwen/Qwen3-Reranker-8B
+      reranking_provider_name: langgenius/siliconflow/siliconflow
+    retrieval_model: multiple
+    top_k: 4
+  dataset_query_variable: ''
+  external_data_tools: []
+  file_upload:
+    allowed_file_extensions:
+    - .JPG
+    - .JPEG
+    - .PNG
+    - .GIF
+    - .WEBP
+    - .SVG
+    - .MP4
+    - .MOV
+    - .MPEG
+    - .WEBM
+    allowed_file_types: []
+    allowed_file_upload_methods:
+    - remote_url
+    - local_file
+    enabled: false
+    image:
+      detail: high
+      enabled: false
+      number_limits: 3
+      transfer_methods:
+      - remote_url
+      - local_file
+    number_limits: 3
+  model:
+    completion_params:
+      stop: []
+    mode: chat
+    name: deepseek-v4-flash
+    provider: langgenius/openai_api_compatible/openai_api_compatible
+  more_like_this:
+    enabled: false
+  opening_statement: ''
+  pre_prompt: "你是法律案例知识库问答助手。仅依据\"上下文\"中的检索结果回答，不得把检索结果外的内容作为事实或案例结论。\n\n回答要求：\n1.\
+    \ 先直接回答用户问题，再概括相关案例的裁判要点、争议焦点和可适用的规则。\n2. 每项结论应标明可追溯的案例名称或文章来源；检索结果不足时明确说明\"知识库中未检索到足够依据\"\
+    。\n3. 不得编造案号、裁判日期、法院、法条或案例细节；不得把案例问答表述为正式法律意见。\n4. 使用简洁、专业的中文。\n\n链接输出强制规则（必须严格遵守）：\n\
+    5. 只要引用了上下文或检索结果中的任何信息，必须在每条结论后以 Markdown 链接形式附上对应的来源链接，格式为 [文档名称/来源说明](完整URL)。\n\
+    6. URL 必须是完整的可点击地址（例如 https://example.com/document.pdf 或 https://example.com/123），不得只写域名或路径片段。\n\
+    7. 如果上下文中的来源链接本身就是完整URL（如 https://example.com），必须原样完整输出，不得省略、截断或替换。\n8. 如果检索结果的文本内容中包含\"\
+    链接：\"或\"Link:\"等字样及其后的URL，必须提取该完整URL并转换为可点击的 Markdown 链接格式 [文档名称](提取到的完整URL) 输出。提取URL时，必须从\"\
+    链接：\"后面开始复制完整的URL字符串（包括所有参数），不得截断或省略。\n9. 每条结论的链接必须紧跟在对应结论之后，不得合并或集中放在末尾。\n10.\
+    \ 不得将链接隐藏在\"引用\"\"来源\"\"详见\"等文字后面而不展示完整URL，用户应能直接点击链接跳转。\n\n当检索结果中未提供完整URL时的处理规则：\n\
+    11. 若某条结论对应的检索结果中未提供完整可点击URL（包括元数据和文本内容中均无URL），不得自行编造、补全或推断任何链接地址。\n12. 必须明确告知用户当前状态，格式示例：\"\
+    该结论来源于 [文档名称]，但知识库检索结果中未提供该文档的完整可点击链接，建议通过 [来源机构名称] 官方渠道（如官网、公众号等）检索获取原文。\"\n\
+    13. 禁止出现以下行为：\n    - 将不完整的路径（如 /files/1）或域名片段（如 example.com）输出为\"链接\"；\n    -\
+    \ 在文档名称上添加超链接但URL为空或为占位符（如 #、javascript:void(0)）；\n    - 将无法跳转的链接伪装成可点击链接。\n\n\
+    正确与错误输出对比示例：\n- ✅ 正确（有完整链接）：最高检于2026年8月15日印发了一批公益诉讼典型案例 [公众号案例结果.txt](https://mp.weixin.qq.com/s?src=11&timestamp=1786946140&ver=6909&signature=3UjpSeOhpwezdDZDKSuG7Ob5lNRSbvtXi-Z43rr81UfNXVD4q0NbDhx4UG6OCaj7GkijDHkTEWy93R7*VEZy2i0rPbQ4Qe2tgbCTHYejId70xioKA0Sf1uW08EYoixn3&new=1)。\n\
+    - ✅ 正确（无链接时）：四川高院发布了典型案例（该结论来源于 推送结果.txt，但知识库检索结果中未提供该文档的完整可点击链接，建议通过四川高院官方渠道检索获取原文）。\n\
+    - ❌ 错误（未附链接）：最高检于2026年8月15日印发了一批公益诉讼典型案例。\n- ❌ 错误（链接不完整）：最高检于2026年8月15日印发了一批公益诉讼典型案例（来源：example.com）。\n\
+    - ❌ 错误（链接集中末尾）：最高检于2026年8月15日印发了一批公益诉讼典型案例。（所有来源见文末）\n- ❌ 错误（伪装链接）：最高检于2026年8月15日印发了一批公益诉讼典型案例\
+    \ [来源](javascript:void(0))。"
+  prompt_type: simple
+  retriever_resource:
+    enabled: true
+  sensitive_word_avoidance:
+    enabled: false
+  speech_to_text:
+    enabled: false
+  suggested_questions: []
+  suggested_questions_after_answer:
+    enabled: false
+  text_to_speech:
+    enabled: false
+    language: ''
+    voice: ''
+  user_input_form: []
+version: 0.7.0

@@ -1,0 +1,427 @@
+app:
+  description: 上传PDF技术协议，PaddleOCR识别后按块迭代提取，由大模型按关键字表提取原文条款及参数，输出关键字摘取表
+  icon: 📄
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 品保部参数提取（v1.0）
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .pdf
+      allowed_file_types:
+      - document
+      allowed_file_upload_methods:
+      - remote_url
+      - local_file
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 200
+        batch_count_limit: 10
+        file_size_limit: 200
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 200
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 200
+        workflow_file_upload_limit: 200
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: 请上传一个PDF技术协议，我将进行OCR识别，并按关键字表提取对应的原文条款和参数。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        sourceType: start
+        targetType: code
+      id: 1790648099281-ocr_code
+      source: '1790648099281'
+      sourceHandle: source
+      target: ocr_code
+      targetHandle: target
+      type: custom
+    - data:
+        isInIteration: false
+        sourceType: code
+        targetType: iteration
+      id: ocr_code-iteration
+      source: ocr_code
+      sourceHandle: source
+      target: '1780000001000'
+      targetHandle: target
+      type: custom
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1780000001000'
+        sourceType: iteration-start
+        targetType: llm
+      id: 1780000001000start-source-llm_chunk-target
+      source: 1780000001000start
+      sourceHandle: source
+      target: llm_chunk
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        sourceType: iteration
+        targetType: code
+      id: iteration-merge_code
+      source: '1780000001000'
+      sourceHandle: source
+      target: merge_code
+      targetHandle: target
+      type: custom
+    - data:
+        isInIteration: false
+        sourceType: code
+        targetType: answer
+      id: merge_code-answer
+      source: merge_code
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+      height: 72
+      id: '1790648099281'
+      position:
+        x: 0
+        y: 47
+      positionAbsolute:
+        x: 0
+        y: 47
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\nimport time\nimport requests\n\nJOB_URL = \"https://paddleocr.aistudio-app.com/api/v2/ocr/jobs\"\
+          \nTOKEN = \"db9d15b95e94de92dd1b1e1c6ebdf711f4f612e7\"\nMODEL = \"PaddleOCR-VL-1.6\"\
+          \n\nCHUNK_MAX_CHARS = 60000\n\n\ndef main(pdf_file) -> dict:\n    # Dify\
+          \ 传给代码节点的文件变量是数组，即使开始节点只允许上传1个\n    if isinstance(pdf_file, list):\n   \
+          \     if not pdf_file:\n            raise ValueError(\"未收到上传的文件，请重新上传\"\
+          )\n        pdf_file = pdf_file[0]\n    if not isinstance(pdf_file, dict):\n\
+          \        raise ValueError(f\"文件变量格式异常: {type(pdf_file)}\")\n    file_url\
+          \ = pdf_file.get(\"url\")\n    filename = pdf_file.get(\"filename\") or\
+          \ \"upload.pdf\"\n    if not file_url:\n        raise ValueError(f\"未能获取文件的下载地址，文件属性:\
+          \ {list(pdf_file.keys())}\")\n\n    headers = {\"Authorization\": f\"bearer\
+          \ {TOKEN}\"}\n\n    # 1. 下载用户上传的 PDF（走 Dify 签名地址，保证本地部署也能用）\n    dl = requests.get(file_url,\
+          \ timeout=120)\n    dl.raise_for_status()\n\n    # 2. 提交 OCR 任务（本地文件模式，multipart\
+          \ 上传）\n    data = {\n        \"model\": MODEL,\n        \"optionalPayload\"\
+          : json.dumps({\n            \"useDocOrientationClassify\": False,\n    \
+          \        \"useDocUnwarping\": False,\n            \"useChartRecognition\"\
+          : False,\n        }),\n    }\n    files = {\"file\": (filename, dl.content,\
+          \ \"application/pdf\")}\n    job_response = requests.post(JOB_URL, headers=headers,\
+          \ data=data, files=files, timeout=120)\n    if job_response.status_code\
+          \ != 200:\n        raise ValueError(f\"OCR任务提交失败: {job_response.status_code}\
+          \ {job_response.text[:300]}\")\n    job_id = job_response.json()[\"data\"\
+          ][\"jobId\"]\n\n    # 3. 轮询任务状态\n    jsonl_url = \"\"\n    waited = 0\n\
+          \    while True:\n        r = requests.get(f\"{JOB_URL}/{job_id}\", headers=headers,\
+          \ timeout=60)\n        if r.status_code != 200:\n            raise ValueError(f\"\
+          查询任务状态失败: {r.status_code} {r.text[:300]}\")\n        state = r.json()[\"\
+          data\"][\"state\"]\n        if state == \"done\":\n            jsonl_url\
+          \ = r.json()[\"data\"][\"resultUrl\"][\"jsonUrl\"]\n            break\n\
+          \        if state == \"failed\":\n            error_msg = r.json()[\"data\"\
+          ].get(\"errorMsg\", \"未知错误\")\n            raise ValueError(f\"OCR任务失败:\
+          \ {error_msg}\")\n        if waited >= 780:\n            raise ValueError(f\"\
+          OCR任务超时未完成（jobId: {job_id}），请稍后重试\")\n        time.sleep(5)\n        waited\
+          \ += 5\n\n    # 4. 下载 JSONL 结果，按页收集 Markdown；图片路径替换为远程URL\n    jr = requests.get(jsonl_url,\
+          \ timeout=120)\n    jr.raise_for_status()\n    markdown_parts = []\n   \
+          \ for line in jr.text.strip().split(\"\\n\"):\n        line = line.strip()\n\
+          \        if not line:\n            continue\n        result = json.loads(line)[\"\
+          result\"]\n        for res in result[\"layoutParsingResults\"]:\n      \
+          \      md_text = res[\"markdown\"][\"text\"]\n            for img_path,\
+          \ img_url in res[\"markdown\"].get(\"images\", {}).items():\n          \
+          \      md_text = md_text.replace(img_path, img_url)\n            markdown_parts.append(md_text)\n\
+          \n    if not markdown_parts:\n        raise ValueError(\"OCR结果为空，请检查PDF内容\"\
+          )\n\n    # 5. 按页边界切块，每块不超过 CHUNK_MAX_CHARS，\n    #    避免超出代码节点400000字符输出上限和模型上下文限制\n\
+          \    chunks = []\n    cur = []\n    cur_len = 0\n    for part in markdown_parts:\n\
+          \        if cur and cur_len + len(part) > CHUNK_MAX_CHARS:\n           \
+          \ chunks.append(\"\\n\\n\".join(cur))\n            cur = []\n          \
+          \  cur_len = 0\n        cur.append(part)\n        cur_len += len(part)\n\
+          \    if cur:\n        chunks.append(\"\\n\\n\".join(cur))\n\n    return\
+          \ {\"chunks\": chunks, \"chunk_count\": len(chunks)}\n"
+        code_language: python3
+        outputs:
+          chunk_count:
+            children: null
+            type: number
+          chunks:
+            children: null
+            type: array[string]
+        selected: false
+        title: PaddleOCR识别
+        type: code
+        variables:
+        - value_selector:
+          - sys
+          - files
+          value_type: array[file]
+          variable: pdf_file
+      height: 51
+      id: ocr_code
+      position:
+        x: 342
+        y: 69.5
+      positionAbsolute:
+        x: 342
+        y: 69.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        error_handle_mode: terminated
+        height: 207
+        is_parallel: true
+        iterator_selector:
+        - ocr_code
+        - chunks
+        output_selector:
+        - llm_chunk
+        - text
+        output_type: array[string]
+        parallel_nums: 10
+        selected: false
+        start_node_id: 1780000001000start
+        title: 逐块关键字提取
+        type: iteration
+        width: 485
+      height: 207
+      id: '1780000001000'
+      position:
+        x: 683
+        y: 0
+      positionAbsolute:
+        x: 683
+        y: 0
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 485
+      zIndex: 1
+    - data:
+        desc: ''
+        isInIteration: true
+        selected: false
+        title: ''
+        type: iteration-start
+      draggable: false
+      height: 48
+      id: 1780000001000start
+      parentId: '1780000001000'
+      position:
+        x: 60
+        y: 71.5
+      positionAbsolute:
+        x: 743
+        y: 71.5
+      selectable: false
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom-iteration-start
+      width: 44
+      zIndex: 1003
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1780000001000'
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gpt-5.5
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+        prompt_template:
+        - id: sys-prompt-chunk
+          role: system
+          text: '你是火电设备技术协议评审助手。你会收到技术协议OCR全文中的一小段文本，任务：按照下面的关键字表，从本段文本中提取命中关键字的原文条款及参数。
+
+
+            关键字表（类别-关键字）：
+
+            质检类：试验、检验、检测、高出/高、尺寸/规格、壁厚/厚度、表面、偏差、%、℃/摄氏度、强度、离地、漆、供应商短名单、见证项目表/见证提前通知时间、长/长度、容积、度/°、宽/宽度
+
+            材质类：304、316、不锈钢、2205、NM、耐磨、料、铸钢、ND
+
+            工艺类：衬、喷、涂、附、镀、球节
+
+            供货类：进口、封闭、保温、换热、一备一用、标牌/铭牌
+
+            材料类：证明、单据、报关单、说明书、报告、手册、合格证、文件、资料、其他
+
+
+            提取规则：
+
+            1. 凡是本段中命中关键字的条款，完整摘录原文（保留条款编号，如 2.1.2、3.1.2 a），禁止改写、禁止编造、禁止总结。
+
+            2. 每个关键字最多提取5条，优先提取含具体参数或数值的条款（如厚度、温度、压力、流速、材质牌号、比例、寿命数值等）。
+
+            3. 同一段原文命中多个关键字时，在每个关键字下分别记录。
+
+            4. 关键字中的"/"表示任一写法都算命中，例如"壁厚/厚度"命中"壁厚"、"厚度"。
+
+            5. 只输出本段命中的关键字条目；本段没有命中任何关键字时输出 []。
+
+            6. 仅输出JSON数组，不要输出解释文字或代码块标记。格式：
+
+            [{"类别":"质检类","关键字":"试验","摘录":["原文1","原文2"]}]'
+        - id: user-prompt-chunk
+          role: user
+          text: '技术协议OCR文本片段如下：
+
+
+            {{#1780000001000.item#}}'
+        selected: true
+        title: 分块提取
+        type: llm
+        vision:
+          enabled: false
+      draggable: true
+      height: 87
+      id: llm_chunk
+      parentId: '1780000001000'
+      position:
+        x: 184
+        y: 60
+      positionAbsolute:
+        x: 867
+        y: 60
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+      zIndex: 1003
+    - data:
+        code: "import json\n\nKEYWORDS = {\n    \"质检类\": [\"试验\", \"检验\", \"检测\",\
+          \ \"高出/高\", \"尺寸/规格\", \"壁厚/厚度\", \"表面\", \"偏差\", \"%\", \"℃/摄氏度\", \"强度\"\
+          , \"离地\", \"漆\", \"供应商短名单\", \"见证项目表/见证提前通知时间\", \"长/长度\", \"容积\", \"度/°\"\
+          , \"宽/宽度\"],\n    \"材质类\": [\"304\", \"316\", \"不锈钢\", \"2205\", \"NM\"\
+          , \"耐磨\", \"料\", \"铸钢\", \"ND\"],\n    \"工艺类\": [\"衬\", \"喷\", \"涂\", \"\
+          附\", \"镀\", \"球节\"],\n    \"供货类\": [\"进口\", \"封闭\", \"保温\", \"换热\", \"一备一用\"\
+          , \"标牌/铭牌\"],\n    \"材料类\": [\"证明\", \"单据\", \"报关单\", \"说明书\", \"报告\", \"\
+          手册\", \"合格证\", \"文件\", \"资料\", \"其他\"],\n}\nMAX_EXCERPTS = 8\n\n\ndef main(results:\
+          \ list) -> dict:\n    # 合并迭代节点里每个文本块的提取结果，按关键字去重聚合\n    merged = {}\n  \
+          \  for r in results or []:\n        text = (r or \"\").strip()\n       \
+          \ if not text:\n            continue\n        s = text.find(\"[\")\n   \
+          \     e = text.rfind(\"]\")\n        if s == -1 or e <= s:\n           \
+          \ continue\n        try:\n            parsed = json.loads(text[s:e + 1])\n\
+          \        except Exception:\n            continue\n        if isinstance(parsed,\
+          \ dict):\n            for v in parsed.values():\n                if isinstance(v,\
+          \ list):\n                    parsed = v\n                    break\n  \
+          \      if not isinstance(parsed, list):\n            continue\n        for\
+          \ it in parsed:\n            if not isinstance(it, dict):\n            \
+          \    continue\n            cat = str(it.get(\"类别\", \"\")).strip()\n   \
+          \         kw = str(it.get(\"关键字\", \"\")).strip()\n            if (cat,\
+          \ kw) not in merged:\n                merged[(cat, kw)] = []\n         \
+          \   for x in it.get(\"摘录\") or []:\n                x = str(x).strip()\n\
+          \                if x and x not in merged[(cat, kw)]:\n                \
+          \    merged[(cat, kw)].append(x)\n\n    lines = [\"| 类别 | 关键字 | 提取内容（原文摘录）\
+          \ |\", \"| --- | --- | --- |\"]\n    count = 0\n    for cat, kws in KEYWORDS.items():\n\
+          \        for kw in kws:\n            excerpts = merged.get((cat, kw), [])[:MAX_EXCERPTS]\n\
+          \            if not excerpts:\n                lines.append(f\"| {cat} |\
+          \ {kw} | （未找到） |\")\n                continue\n            for i, x in enumerate(excerpts):\n\
+          \                x = x.replace(\"|\", \"\\\\|\").replace(\"\\n\", \"<br>\"\
+          )\n                lines.append(f\"| {cat if i == 0 else ''} | {kw if i\
+          \ == 0 else ''} | {x} |\")\n                count += 1\n\n    summary =\
+          \ (\n        f\"本次共处理 {len(results or [])} 个文本块，\"\n        f\"共提取 {count}\
+          \ 条摘录（每个关键字最多保留 {MAX_EXCERPTS} 条）。\"\n        f\"表格可直接复制到Excel（已解密_关键字摘取.xlsx\
+          \ 的 类别/关键字/1..n 列）。\"\n    )\n    return {\"table\": summary + \"\\n\\n\"\
+          \ + \"\\n\".join(lines)}\n"
+        code_language: python3
+        outputs:
+          table:
+            children: null
+            type: string
+        selected: false
+        title: 合并结果
+        type: code
+        variables:
+        - value_selector:
+          - '1780000001000'
+          - output
+          variable: results
+      height: 51
+      id: merge_code
+      position:
+        x: 1268
+        y: 112.5
+      positionAbsolute:
+        x: 1268
+        y: 112.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '{{#merge_code.table#}}'
+        selected: false
+        title: 直接回复
+        type: answer
+        variables: []
+      height: 101
+      id: answer
+      position:
+        x: 1609
+        y: 96
+      positionAbsolute:
+        x: 1609
+        y: 96
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    viewport:
+      x: -122.34999999999997
+      y: 395.05
+      zoom: 0.7
+  rag_pipeline_variables: []

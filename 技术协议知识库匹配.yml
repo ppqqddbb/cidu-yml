@@ -1,0 +1,513 @@
+app:
+  description: 用户上传一份技术文件后，在预先建立的 Dify 知识库中检索并返回最匹配的知识库文件名称和匹配度。
+  icon: 📚
+  icon_background: '#E3F2FD'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 技术协议知识库匹配
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: package
+  value:
+    plugin_unique_identifier: langgenius/siliconflow:0.0.46@3e8e3320dd5569308c25e897d05237941dd5b67954303c063b1c7fdcea84fc0f
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .doc
+      - .docx
+      - .pdf
+      - .DOC
+      - .DOCX
+      - .PDF
+      allowed_file_types:
+      - document
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 200
+        batch_count_limit: 10
+        file_size_limit: 200
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 200
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 200
+        workflow_file_upload_limit: 200
+      image:
+        enabled: false
+        number_limits: 1
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 1
+    opening_statement: 上传一份待匹配技术文件，系统将从已绑定的知识库中返回最匹配的文件名称和匹配度。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        sourceType: start
+        targetType: document_extractor
+      id: start-extractor
+      source: start
+      sourceHandle: source
+      target: document_extractor
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: document_extractor
+        targetType: code
+      id: extractor-query-builder
+      source: document_extractor
+      sourceHandle: source
+      target: query_builder
+      targetHandle: target
+      type: custom
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: iteration
+      id: query-builder-document-chunk-iteration
+      source: query_builder
+      sourceHandle: source
+      target: document_chunk_iteration
+      targetHandle: target
+      type: custom
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: document_chunk_iteration
+        sourceType: iteration-start
+        targetType: knowledge-retrieval
+      id: document-chunk-iteration-start-to-retrieval
+      selected: true
+      source: document_chunk_iteration_start
+      sourceHandle: source
+      target: chunk_knowledge_retrieval
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: document_chunk_iteration
+        sourceType: knowledge-retrieval
+        targetType: code
+      id: chunk-retrieval-to-serializer
+      source: chunk_knowledge_retrieval
+      sourceHandle: source
+      target: chunk_result_serializer
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: iteration
+        targetType: code
+      id: document-chunk-iteration-to-score-aggregator
+      source: document_chunk_iteration
+      sourceHandle: source
+      target: score_aggregator
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: code
+        targetType: answer
+      id: score-aggregator-answer
+      source: score_aggregator
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        selected: false
+        title: 上传待匹配文件
+        type: start
+        variables: []
+      height: 73
+      id: start
+      position:
+        x: 0
+        y: 54
+      positionAbsolute:
+        x: 0
+        y: 54
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        desc: 提取上传文件正文；扫描件需先在知识库或上传前完成 OCR。
+        is_array_file: true
+        selected: false
+        title: 提取上传文件正文
+        type: document-extractor
+        variable_selector:
+        - sys
+        - files
+      height: 148
+      id: document_extractor
+      position:
+        x: 342
+        y: 28.5
+      positionAbsolute:
+        x: 342
+        y: 28.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import re\n\nCHUNK_CHARS = 3000\nCHUNK_OVERLAP = 160\nBOUNDARY_SEARCH_CHARS\
+          \ = 250\n\ndef _file_name(file_value):\n    if isinstance(file_value, list):\n\
+          \        file_value = file_value[0] if file_value else {}\n    if isinstance(file_value,\
+          \ dict):\n        return str(\n            file_value.get(\"name\")\n  \
+          \          or file_value.get(\"filename\")\n            or file_value.get(\"\
+          title\")\n            or \"待匹配文件\"\n        )\n    return \"待匹配文件\"\n\n\
+          def _clean(text):\n    if isinstance(text, list):\n        text = \"\\n\"\
+          .join(str(item or \"\") for item in text)\n    text = str(text or \"\").replace(\"\
+          \\r\\n\", \"\\n\").replace(\"\\r\", \"\\n\")\n    lines = [re.sub(r\"\\\
+          s+\", \" \", line).strip() for line in text.split(\"\\n\")]\n    return\
+          \ \"\\n\".join(line for line in lines if line)\n\ndef _split_document(text):\n\
+          \    \"\"\"Split text into chunks of approximately CHUNK_CHARS characters,\
+          \ no upper limit on chunk count.\"\"\"\n    length = len(text)\n    if not\
+          \ length:\n        return []\n    chunk_count = max(1, (length + CHUNK_CHARS\
+          \ - 1) // CHUNK_CHARS)\n    chunks = []\n    start = 0\n    for index in\
+          \ range(chunk_count):\n        if index == chunk_count - 1:\n          \
+          \  cut = length\n        else:\n            ideal_cut = ((index + 1) * length)\
+          \ // chunk_count\n            window_start = max(start + 1, ideal_cut -\
+          \ BOUNDARY_SEARCH_CHARS)\n            cut = text.rfind(\"\\n\", window_start,\
+          \ ideal_cut + 1)\n            if cut <= start:\n                cut = ideal_cut\n\
+          \        query_chunk = text[max(0, start - CHUNK_OVERLAP):cut].strip()\n\
+          \        if query_chunk:\n            chunks.append(query_chunk)\n     \
+          \   start = cut\n    return chunks\n\ndef main(reference_file, document_text)\
+          \ -> dict:\n    body = _clean(document_text)\n    chunks = _split_document(body)\
+          \ if body else []\n    return {\n        \"reference_name\": _file_name(reference_file),\n\
+          \        \"source_ready\": bool(body),\n        \"retrieval_queries\": chunks,\n\
+          \        \"source_chunk_count\": len(chunks),\n    }\n"
+        code_language: python3
+        outputs:
+          reference_name:
+            children: null
+            type: string
+          retrieval_queries:
+            children: null
+            type: array[string]
+          source_chunk_count:
+            children: null
+            type: number
+          source_ready:
+            children: null
+            type: boolean
+        selected: false
+        title: 切分上传文档全文
+        type: code
+        variables:
+        - value_selector:
+          - sys
+          - files
+          variable: reference_file
+        - value_selector:
+          - document_extractor
+          - text
+          variable: document_text
+      height: 52
+      id: query_builder
+      position:
+        x: 683
+        y: 101
+      positionAbsolute:
+        x: 683
+        y: 101
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        desc: 对上传文档的每一个分段分别检索知识库，并行数为29，即每批最多同时处理29个分段，分段总数不限。
+        error_handle_mode: terminated
+        flatten_output: true
+        height: 270
+        is_parallel: true
+        iterator_input_type: array[string]
+        iterator_selector:
+        - query_builder
+        - retrieval_queries
+        output_selector:
+        - chunk_result_serializer
+        - chunk_matches
+        output_type: array[string]
+        parallel_nums: 29
+        selected: false
+        start_node_id: document_chunk_iteration_start
+        title: 逐段检索上传全文
+        type: iteration
+        width: 806
+      height: 270
+      id: document_chunk_iteration
+      position:
+        x: 1024
+        y: 0
+      positionAbsolute:
+        x: 1024
+        y: 0
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 806
+      zIndex: 1
+    - data:
+        desc: ''
+        isInIteration: true
+        selected: false
+        title: ''
+        type: iteration-start
+      draggable: false
+      height: 48
+      id: document_chunk_iteration_start
+      parentId: document_chunk_iteration
+      position:
+        x: 60
+        y: 75.5
+      positionAbsolute:
+        x: 1084
+        y: 75.5
+      selectable: false
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom-iteration-start
+      width: 44
+      zIndex: 1002
+    - data:
+        dataset_ids:
+        - xQtvVckH6oqvWVfIuWAQ7cRPMy+uDS6jKkY4ucSe02JDYYFNX0d7xKwUFaMyylcO
+        desc: 每次使用一个上传文档分段检索已绑定的技术协议知识库。
+        metadata_filtering_mode: disabled
+        multiple_retrieval_config:
+          reranking_enable: true
+          reranking_mode: reranking_model
+          reranking_model:
+            model: Qwen/Qwen3-Reranker-8B
+            provider: langgenius/siliconflow/siliconflow
+          score_threshold: 0.1
+          top_k: 10
+        query_attachment_selector: []
+        query_variable_selector:
+        - document_chunk_iteration
+        - item
+        retrieval_mode: multiple
+        selected: false
+        title: 检索当前上传分段
+        type: knowledge-retrieval
+      extent: parent
+      height: 134
+      id: chunk_knowledge_retrieval
+      parentId: document_chunk_iteration
+      position:
+        x: 184
+        y: 60
+      positionAbsolute:
+        x: 1208
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "import json\n\ndef main(retrieval_results) -> dict:\n    # Emit one\
+          \ JSON value for every upload chunk, including empty retrievals.\n    #\
+          \ This preserves the denominator required for full-document coverage.\n\
+          \    if isinstance(retrieval_results, str):\n        try:\n            retrieval_results\
+          \ = json.loads(retrieval_results)\n        except Exception:\n         \
+          \   retrieval_results = []\n    return {\"chunk_matches\": json.dumps(retrieval_results\
+          \ or [], ensure_ascii=False)}\n"
+        code_language: python3
+        outputs:
+          chunk_matches:
+            children: null
+            type: string
+        selected: false
+        title: 保留当前分段检索结果
+        type: code
+        variables:
+        - value_selector:
+          - chunk_knowledge_retrieval
+          - result
+          variable: retrieval_results
+      extent: parent
+      height: 52
+      id: chunk_result_serializer
+      parentId: document_chunk_iteration
+      position:
+        x: 505
+        y: 97.83333333333334
+      positionAbsolute:
+        x: 1529
+        y: 97.83333333333334
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "import json\n\nTOP_DOCUMENTS = 10\n\ndef _records(value):\n    \"\"\
+          \"Read a single upload-chunk retrieval result across Dify result formats.\"\
+          \"\"\n    if isinstance(value, str):\n        try:\n            return _records(json.loads(value))\n\
+          \        except Exception:\n            return []\n    if isinstance(value,\
+          \ list):\n        return [item for item in value if isinstance(item, dict)]\n\
+          \    if not isinstance(value, dict):\n        return []\n    for key in\
+          \ (\"result\", \"records\", \"data\", \"items\", \"documents\", \"retrieval_results\"\
+          ):\n        nested = value.get(key)\n        if isinstance(nested, (list,\
+          \ dict, str)):\n            records = _records(nested)\n            if records:\n\
+          \                return records\n    return [value]\n\ndef _first_text(values,\
+          \ default=\"\"):\n    for value in values:\n        if value is not None\
+          \ and str(value).strip():\n            return str(value).strip()\n    return\
+          \ default\n\ndef _document_name(record):\n    metadata = record.get(\"metadata\"\
+          ) or record.get(\"document_metadata\") or {}\n    document = record.get(\"\
+          document\") or record.get(\"source_document\") or {}\n    if not isinstance(metadata,\
+          \ dict):\n        metadata = {}\n    if not isinstance(document, dict):\n\
+          \        document = {}\n    return _first_text((\n        record.get(\"\
+          document_name\"), record.get(\"document_title\"), record.get(\"title\"),\n\
+          \        record.get(\"name\"), record.get(\"filename\"), record.get(\"file_name\"\
+          ),\n        document.get(\"name\"), document.get(\"document_name\"), document.get(\"\
+          title\"),\n        metadata.get(\"document_name\"), metadata.get(\"document_title\"\
+          ), metadata.get(\"title\"),\n        metadata.get(\"file_name\"), metadata.get(\"\
+          filename\"), metadata.get(\"source_name\"),\n    ), \"知识库文档（未返回文件名）\")\n\
+          \ndef _score(record):\n    metadata = record.get(\"metadata\") if isinstance(record.get(\"\
+          metadata\"), dict) else {}\n    for key in (\"score\", \"retrieval_score\"\
+          , \"similarity\", \"relevance_score\"):\n        try:\n            value\
+          \ = float(record.get(key, metadata.get(key)))\n            if value > 1:\n\
+          \                value /= 100.0\n            return max(0.0, min(1.0, value))\n\
+          \        except (TypeError, ValueError):\n            pass\n    return None\n\
+          \ndef _median(values):\n    ordered = sorted(values)\n    middle = len(ordered)\
+          \ // 2\n    if len(ordered) % 2:\n        return ordered[middle]\n    return\
+          \ (ordered[middle - 1] + ordered[middle]) / 2.0\n\ndef _cell(value):\n \
+          \   return str(value or \"\").replace(\"|\", \"\\\\|\").replace(\"\\n\"\
+          , \" \")\n\ndef main(source_ready, source_chunk_count, chunk_match_results)\
+          \ -> dict:\n    if not source_ready:\n        return {\"result\": \"上传文件未提取到可检索正文，暂无法进行知识库匹配。请上传可复制文本的\
+          \ DOC、DOCX 或 PDF，扫描件请先完成 OCR。\"}\n\n    expected_chunks = max(int(source_chunk_count\
+          \ or 0), 0)\n    if isinstance(chunk_match_results, list):\n        raw_chunks\
+          \ = chunk_match_results\n    elif isinstance(chunk_match_results, str):\n\
+          \        raw_chunks = [chunk_match_results]\n    else:\n        raw_chunks\
+          \ = []\n    total_chunks = max(expected_chunks, len(raw_chunks))\n    if\
+          \ total_chunks == 0:\n        return {\"result\": \"上传文件未生成可检索分段，暂无法进行全文匹配。\"\
+          }\n\n    # For each upload chunk, retain only the best hit for each candidate\
+          \ document.\n    # Missing candidate/chunk pairs remain zero and therefore\
+          \ reduce whole-document score.\n    chunk_maps = []\n    readable_records\
+          \ = 0\n    for raw_chunk in raw_chunks:\n        matches = {}\n        for\
+          \ record in _records(raw_chunk):\n            score = _score(record)\n \
+          \           if score is None:\n                continue\n            readable_records\
+          \ += 1\n            name = _document_name(record)\n            matches[name]\
+          \ = max(matches.get(name, 0.0), score)\n        chunk_maps.append(matches)\n\
+          \    while len(chunk_maps) < total_chunks:\n        chunk_maps.append({})\n\
+          \n    document_scores = {}\n    for index, matches in enumerate(chunk_maps):\n\
+          \        for name, score in matches.items():\n            if name not in\
+          \ document_scores:\n                document_scores[name] = [0.0] * total_chunks\n\
+          \            document_scores[name][index] = score\n\n    if not document_scores:\n\
+          \        return {\n            \"result\": (\n                \"未获得可用于全文匹配的知识库结果。上传分段数：%d；已返回检索结果的分段数：%d；可读取分数的记录数：%d。\\\
+          n\\n\"\n                \"请确认“检索当前上传分段”节点已绑定正确知识库，并确认知识库文档已完成索引。\"\n   \
+          \         ) % (total_chunks, len(raw_chunks), readable_records)\n      \
+          \  }\n\n    ranking = []\n    for name, scores in document_scores.items():\n\
+          \        hit_scores = [score for score in scores if score > 0]\n       \
+          \ overall_similarity = sum(scores) / total_chunks          # 全文平均相似度\n \
+          \       coverage = len(hit_scores) / float(total_chunks)         # 覆盖率\n\
+          \        stability = _median(scores)                              # 稳定性（中位数）\n\
+          \        best = max(scores)\n        hit_quality = sum(hit_scores) / len(hit_scores)\
+          \ if hit_scores else 0\n\n        # 综合匹配度：兼顾全文平均相似度、分段覆盖率、稳定性和最佳局部匹配\n \
+          \       match = (\n            0.55 * overall_similarity\n            +\
+          \ 0.30 * coverage * hit_quality\n            + 0.10 * stability\n      \
+          \      + 0.05 * best\n        )\n        ranking.append((match, name))\n\
+          \n    ranking.sort(reverse=True)\n    lines = [\"| 匹配文件名称 | 匹配度 |\", \"\
+          | :--- | ---: |\"]\n    for match, name in ranking[:TOP_DOCUMENTS]:\n  \
+          \      lines.append(\"| %s | %.2f%% |\" % (_cell(name), match * 100))\n\
+          \    return {\"result\": \"\\n\".join(lines)}\n"
+        code_language: python3
+        outputs:
+          result:
+            children: null
+            type: string
+        selected: false
+        title: 聚合文件匹配度
+        type: code
+        variables:
+        - value_selector:
+          - query_builder
+          - source_ready
+          variable: source_ready
+        - value_selector:
+          - query_builder
+          - source_chunk_count
+          variable: source_chunk_count
+        - value_selector:
+          - document_chunk_iteration
+          - output
+          variable: chunk_match_results
+      height: 52
+      id: score_aggregator
+      position:
+        x: 1930
+        y: 154.5
+      positionAbsolute:
+        x: 1930
+        y: 154.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        answer: '{{#score_aggregator.result#}}'
+        selected: false
+        title: 返回匹配结果
+        type: answer
+        variables: []
+      height: 102
+      id: answer
+      position:
+        x: 2271
+        y: 138
+      positionAbsolute:
+        x: 2271
+        y: 138
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    viewport:
+      x: 105.59999999999991
+      y: 255
+      zoom: 0.7
+  rag_pipeline_variables: []

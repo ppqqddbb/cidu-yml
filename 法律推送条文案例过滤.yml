@@ -1,0 +1,216 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 法律推送条文案例过滤
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 200
+        batch_count_limit: 10
+        file_size_limit: 200
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 200
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 200
+        workflow_file_upload_limit: 200
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        sourceType: start
+        targetType: llm
+      id: 1787196695818-llm
+      source: '1787196695818'
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+    - data:
+        sourceType: llm
+        targetType: answer
+      id: llm-answer
+      source: llm
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+      height: 72
+      id: '1787196695818'
+      position:
+        x: 80
+        y: 282
+      positionAbsolute:
+        x: 80
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+        prompt_template:
+        - id: d734aac5-9368-4484-b183-70278ad6af52
+          role: system
+          text: '你是一个专业的法律文档分类助手。请根据提供的文档条目，将每个文档分类为“法律条文”或“指导案例”。
+
+
+            输入格式：每个文档条目包含标题、来源、日期、链接和正文。多个文档条目之间用“---”分隔。
+
+
+            分类标准：
+
+            - 法律条文类：文档主要内容是发布、解读法律法规、司法解释、地方性法规等，或者介绍具体法律条款。标题中常含法规名称或“出台”“发布”“修订”等词。
+
+            - 指导案例类：文档主要内容是发布指导性案例、典型案例，包含案件名称、基本案情、裁判结果、典型意义等要素。标题中常含“指导性案例”“典型案例”等词。
+
+
+            输出要求：
+
+            分别输出两类文档的原始元数据（标题、来源、日期、链接），格式如下：
+
+            【法律条文】
+
+            标题：...
+
+            来源：...
+
+            日期：...
+
+            链接：...
+
+
+            【指导案例】
+
+            标题：...
+
+            来源：...
+
+            日期：...
+
+            链接：...
+
+
+            若某类无内容，写“无”。如果某个文档同时涉及两类内容，以文档标题和主要内容为准，归入最匹配的类别，不重复输出。
+
+
+            请处理以下文档：
+
+            [在此粘贴文档条目列表]'
+        selected: false
+        title: LLM
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: llm
+      position:
+        x: 382
+        y: 282
+      positionAbsolute:
+        x: 382
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '{{#llm.text#}}'
+        selected: false
+        title: 直接回复
+        type: answer
+        variables: []
+      height: 101
+      id: answer
+      position:
+        x: 680
+        y: 282
+      positionAbsolute:
+        x: 680
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    viewport:
+      x: 0
+      y: 1
+      zoom: 1
+  rag_pipeline_variables: []

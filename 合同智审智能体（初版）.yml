@@ -1,0 +1,641 @@
+app:
+  description: 上传合同文件（DOC/DOCX 走文档提取器；PDF/JPG/PNG 走 PaddleOCR），提取正文后由法务专家模型输出标准化智审报告。
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 合同智审智能体（初版）
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: package
+  value:
+    plugin_unique_identifier: user/paddleocr-local-plugin:0.1.0@1f76f949676eb62a8f778e2463800ebb38ef1999d30d43b518d94946ceba530a
+    version: null
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .DOC
+      - .DOCX
+      - .PDF
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .doc
+      - .docx
+      - .pdf
+      - .jpg
+      - .jpeg
+      - .png
+      allowed_file_types:
+      - image
+      - document
+      allowed_file_upload_methods:
+      - remote_url
+      - local_file
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 200
+        batch_count_limit: 10
+        file_size_limit: 200
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 200
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 200
+        workflow_file_upload_limit: 200
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 1
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: if-else
+      id: start_to_route
+      source: start_node
+      sourceHandle: source
+      target: file_route_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: tool
+      id: route_to_ocr
+      source: file_route_node
+      sourceHandle: ocr_case
+      target: ocr_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+      id: route_to_doc
+      source: file_route_node
+      sourceHandle: doc_case
+      target: doc_extract_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: route_to_err
+      source: file_route_node
+      sourceHandle: 'false'
+      target: unsupported_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: tool
+        targetType: code
+      id: ocr_to_merge
+      source: ocr_node
+      sourceHandle: source
+      target: merge_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: code
+      id: doc_to_merge
+      source: doc_extract_node
+      sourceHandle: source
+      target: merge_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: merge_to_llm
+      source: merge_node
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: answer
+      id: llm_to_answer
+      source: llm
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+      height: 72
+      id: start_node
+      position:
+        x: 40
+        y: 280
+      positionAbsolute:
+        x: 40
+        y: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        cases:
+        - case_id: ocr_case
+          conditions:
+          - comparison_operator: contains
+            id: ocr_case_file_cond
+            sub_variable_condition:
+              case_id: ocr_case_sub
+              conditions:
+              - comparison_operator: contains
+                id: ocr_case_ext_0
+                key: name
+                value: .PDF
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_1
+                key: name
+                value: .pdf
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_2
+                key: name
+                value: .JPG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_3
+                key: name
+                value: .jpg
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_4
+                key: name
+                value: .JPEG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_5
+                key: name
+                value: .jpeg
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_6
+                key: name
+                value: .PNG
+                varType: string
+              - comparison_operator: contains
+                id: ocr_case_ext_7
+                key: name
+                value: .png
+                varType: string
+              logical_operator: or
+            value: ''
+            varType: array[file]
+            variable_selector:
+            - sys
+            - files
+          id: ocr_case
+          logical_operator: or
+        - case_id: doc_case
+          conditions:
+          - comparison_operator: contains
+            id: doc_case_file_cond
+            sub_variable_condition:
+              case_id: doc_case_sub
+              conditions:
+              - comparison_operator: contains
+                id: doc_case_ext_0
+                key: name
+                value: .DOCX
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_1
+                key: name
+                value: .docx
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_2
+                key: name
+                value: .DOC
+                varType: string
+              - comparison_operator: contains
+                id: doc_case_ext_3
+                key: name
+                value: .doc
+                varType: string
+              logical_operator: or
+            value: ''
+            varType: array[file]
+            variable_selector:
+            - sys
+            - files
+          id: doc_case
+          logical_operator: or
+        selected: false
+        title: 文件类型分流
+        type: if-else
+      height: 459
+      id: file_route_node
+      position:
+        x: 340
+        y: 240
+      positionAbsolute:
+        x: 340
+        y: 240
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        is_team_authorization: true
+        paramSchemas:
+        - auto_generate: null
+          default: null
+          form: form
+          human_description:
+            en_US: Authentication token for PaddleOCR cloud API.
+            ja_JP: Authentication token for PaddleOCR cloud API.
+            pt_BR: Authentication token for PaddleOCR cloud API.
+            zh_Hans: PaddleOCR 云端 API 的认证令牌。
+          label:
+            en_US: PaddleOCR Token
+            ja_JP: PaddleOCR Token
+            pt_BR: PaddleOCR Token
+            zh_Hans: PaddleOCR 令牌
+          llm_description: Authentication token for PaddleOCR API.
+          max: null
+          min: null
+          name: paddleocr_token
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: secret-input
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            ja_JP: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            pt_BR: Upload a file (PDF, PNG, JPG, DOC, DOCX) for OCR recognition.
+            zh_Hans: 上传文件（PDF、PNG、JPG、DOC、DOCX）进行 OCR 识别。
+          label:
+            en_US: File to OCR
+            ja_JP: File to OCR
+            pt_BR: File to OCR
+            zh_Hans: 待识别文件
+          llm_description: File to upload for OCR processing.
+          max: null
+          min: null
+          name: file
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: file
+        params:
+          file: ''
+          paddleocr_token: ''
+        plugin_id: user/paddleocr-local-plugin
+        plugin_unique_identifier: user/paddleocr-local-plugin:0.1.0@1f76f949676eb62a8f778e2463800ebb38ef1999d30d43b518d94946ceba530a
+        provider_icon: http://ciduai.daneng.cc/console/api/workspaces/current/plugin/icon?tenant_id=66edc05c-24c6-443b-bdd6-a9a4a01bf67c&filename=061877fb1cb057574c964ac4c04f1bd0f8b9c31be6815bb321d252af1d7778da.svg
+        provider_id: user/paddleocr-local-plugin/paddleocr_local
+        provider_name: user/paddleocr-local-plugin/paddleocr_local
+        provider_type: builtin
+        selected: false
+        title: PaddleOCR云端识别
+        tool_configurations:
+          paddleocr_token:
+            type: mixed
+            value: a0c80577924bfa928bc9ad6fd0a1ca28d4894700
+        tool_description: 调用 PaddleOCR 云端 API 识别文件（PDF、PNG、JPG、DOC、DOCX）并返回 markdown
+          内容。
+        tool_label: PaddleOCR云端识别
+        tool_name: paddleocr_local
+        tool_node_version: '2'
+        tool_parameters:
+          file:
+            type: variable
+            value:
+            - sys
+            - files
+        type: tool
+      height: 87
+      id: ocr_node
+      position:
+        x: 680
+        y: 120
+      positionAbsolute:
+        x: 680
+        y: 120
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        desc: DOC/DOCX 文件走文档提取器
+        is_array_file: true
+        selected: false
+        title: 文档提取器
+        type: document-extractor
+        variable_selector:
+        - sys
+        - files
+      height: 131
+      id: doc_extract_node
+      position:
+        x: 680
+        y: 320
+      positionAbsolute:
+        x: 680
+        y: 320
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        code: "import json\n\ndef _pick_text(raw):\n    text = str(raw or \"\").strip()\n\
+          \    if not text:\n        return \"\"\n    try:\n        data = json.loads(text)\n\
+          \    except Exception:\n        return text\n    if isinstance(data, dict):\n\
+          \        for key in (\"markdown_content\", \"markdown\", \"text\", \"content\"\
+          , \"result\", \"output\"):\n            value = data.get(key)\n        \
+          \    if isinstance(value, str) and value.strip():\n                return\
+          \ value.strip()\n        return text\n    if isinstance(data, list):\n \
+          \       parts = []\n        for item in data:\n            picked = _pick_text(json.dumps(item,\
+          \ ensure_ascii=False))\n            if picked:\n                parts.append(picked)\n\
+          \        return \"\\n\".join(parts).strip()\n    return text\n\ndef main(ocr_text:\
+          \ str = \"\", doc_text: str = \"\") -> dict:\n    ocr_value = _pick_text(ocr_text)\n\
+          \    doc_value = _pick_text(doc_text)\n    recognized_text = ocr_value or\
+          \ doc_value\n    recognized_source = \"ocr\" if ocr_value else (\"doc\"\
+          \ if doc_value else \"none\")\n    return {\n        \"recognized_text\"\
+          : recognized_text,\n        \"recognized_source\": recognized_source,\n\
+          \    }"
+        code_language: python3
+        desc: 统一解析 OCR 与文档提取器输出。
+        outputs:
+          recognized_source:
+            children: null
+            type: string
+          recognized_text:
+            children: null
+            type: string
+        selected: false
+        title: 识别文本合并
+        type: code
+        variables:
+        - value_selector:
+          - ocr_node
+          - text
+          variable: ocr_text
+        - value_selector:
+          - doc_extract_node
+          - text
+          variable: doc_text
+      height: 79
+      id: merge_node
+      position:
+        x: 980
+        y: 220
+      positionAbsolute:
+        x: 980
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        memory:
+          query_prompt_template: '请根据以下合同正文完成智能预审，并严格按系统提示的标准化报告格式输出（含修改建议分条：原条款内容、风险分析、修改建议、修改等级）。
+
+
+            【文件识别正文】
+
+            {{#merge_node.recognized_text#}}
+
+
+            【请求说明】
+
+            {{#sys.query#}}
+
+            '
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: gpt-5.5
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+        prompt_template:
+        - id: 94b925fe-a4fa-4e23-8ac0-16739dee69e3
+          role: system
+          text: "# 角色定义\n你是一位资深企业法务专家，拥有10年以上合同审核经验，精通合同法、公司法、民法典及相关司法解释。你的核心能力是：自动识别合同类型、对照审核要点进行逐条校验、识别风险并输出标准化修改建议。\n\
+            \n# 核心任务\n根据用户上传的合同文本，自动完成以下标准化审核流程：\n1. **自动识别合同类型**：判断合同属于采购合同、销售合同、服务合同、合作协议、保密协议、软件许可合同或其他类型。\n\
+            2. **匹配审核要点**：根据合同类型，调用对应的三段式审核要点库。\n3. **逐条校验与风险评估**：对照审核要点，逐条核查合同条款，标记风险点。\n\
+            4. **输出标准化审核意见**：按统一规范格式输出审核报告。\n\n# 三段式审核要点库（内置核心规则）\n\n## 一、采购合同审核要点\n\
+            ### （一）审核重点\n1. 标的物条款：规格型号、技术参数、质量标准是否明确可验证\n2. 数量与价格条款：数量计算方式、单价、总价、调价机制是否清晰\n\
+            3. 交付条款：交付时间、地点、方式、运输费用承担、验收标准与程序\n4. 付款条款：付款节点、付款比例、发票类型、支付方式\n5. 质量保证与售后服务：质保期限、质保范围、维修响应时间\n\
+            6. 违约责任：违约金计算标准、赔偿范围、免责事由\n7. 知识产权条款：确保采购标的物不侵犯第三方知识产权\n\n### （二）常见风险\n\
+            - 质量标准引用作废标准或标准不明确，导致验收纠纷\n- 交付时间、验收程序约定模糊，卖方延迟交付无法追责\n- 付款节点与交付/验收节点脱钩，付款后丧失履约杠杆\n\
+            - 违约金过低（低于实际损失30%），无法有效约束对方\n- 质保期限过短、质保范围过窄，售后成本不可控\n- 知识产权侵权责任未明确划分，买方承担连带风险\n\
+            \n### （三）修改方向\n- 质量标准：明确引用现行有效国标/行标，或约定以买方技术规格书为准\n- 交付条款：约定“交付即完成签收，但不免除卖方质量保证责任”\n\
+            - 付款条款：将验收合格作为尾款支付的前置条件\n- 违约金：建议提高至合同总价20%-30%，或约定不低于实际损失\n- 质保条款：争取至少12个月质保期，明确响应时限和备用方案\n\
+            - 知识产权：增加“卖方保证不侵犯第三方知识产权，否则承担全部赔偿责任”\n\n## 二、销售合同审核要点\n### （一）审核重点\n1.\
+            \ 产品/服务描述条款：规格、数量、交付内容明确\n2. 价格与支付条款：价格构成、支付方式、开票时间\n3. 交付与安装条款：交付时间、安装调试责任、验收标准\n\
+            4. 质保与售后服务条款：质保期限、服务范围、责任限制\n5. 违约责任与责任限制：违约金、赔偿上限、间接损失免责\n6. 知识产权条款：明确产品销售不涉及知识产权侵权\n\
+            7. 争议解决条款：管辖法院/仲裁机构选择\n\n### （二）常见风险\n- 质保期限被要求过长，质保范围被不合理扩大\n- 赔偿责任上限过低，或间接损失免责条款缺失\n\
+            - 验收标准不明确，导致客户以不合格为由要求降价或退货\n- 付款节点安排在交付之后，回款风险高\n- 争议解决条款约定在对方所在地，我方应诉成本高\n\
+            \n### （三）修改方向\n- 质保条款：限缩质保范围至“正常使用条件下”，排除易耗品、不当使用\n- 责任上限：争取将赔偿上限设定为合同总价（避免无限责任）\n\
+            - 验收条款：明确验收期限和程序，超期未提异议视为验收合格\n- 付款条款：争取预付款+发货款+验收尾款的阶梯式付款结构\n- 争议解决：优先约定在我方所在地法院管辖\n\
+            \n## 三、服务合同审核要点\n### （一）审核重点\n1. 服务范围与内容：服务内容、交付成果、工作量/人天\n2. 服务标准与验收：服务标准、验收标准与方法\n\
+            3. 服务期限与人员：服务期限、人员配置、资质要求、替换机制\n4. 费用与支付条款：计费方式、付款节点、结算周期\n5. 知识产权归属：服务过程中产生的知识产权归属约定\n\
+            6. 保密条款：保密信息范围、保密期限、例外情况\n7. 违约责任：服务不达标的违约责任、违约金计算\n\n### （二）常见风险\n- 服务范围“开口”，乙方以“增加工作量”为由不断要求追加费用\n\
+            - 服务标准主观性强（如“满意”），难以量化验收\n- 人员配置未约定关键人员，乙方随意更换高资质人员\n- 知识产权归属约定不明，核心技术成果被乙方保留\n\
+            - 验收程序缺失，乙方完成服务后我方无法确认是否达标\n- 服务不达标的违约责任缺失，仅约定“甲方有权解除合同”\n\n### （三）修改方向\n\
+            - 服务范围：附详细《服务范围说明书》作为附件，明确边界\n- 验收标准：将“满意”转化为具体、可量化的KPIs指标\n- 人员条款：约定关键人员名单，未经甲方同意不得更换\n\
+            - 知识产权：约定服务成果的知识产权归甲方所有\n- 验收程序：设定验收期，超期未验收视为验收通过（但保留保固责任）\n- 违约责任：增加服务不达标的阶梯式罚款条款\n\
+            \n## 四、合作协议（框架/合作类）审核要点\n### （一）审核重点\n1. 合作范围与模式：合作内容、分工、合作模式\n2. 投入与分配条款：各方投入（资源/资金/人力）、收益分配比例与方式\n\
+            3. 知识产权归属：合作过程中产生的新知识产权归属约定\n4. 排他/非排他条款：是否排他合作、合作期限\n5. 退出机制：退出条件、退出时资产/收益的处理\n\
+            6. 管理决策机制：决策机构（如联席会）、决策程序、僵局解决机制\n7. 保密条款：合作过程中的保密义务\n\n### （二）常见风险\n\
+            - 投入与分配不对等：一方投入少但分配比例高\n- 知识产权归属不清晰：合作成果被一方独占，或权属约定不明\n- 排他条款导致我方被锁定，无法与其他方合作\n\
+            - 退出机制缺失，合作结束后资产/权益难以清算\n- 决策僵局无解决路径，合作陷入停滞\n- 资源投入未量化，合作方“以资源换股份”后不兑现承诺\n\
+            \n### （三）修改方向\n- 投入条款：资源投入量化并设定里程碑，未达里程碑则调整分配\n- 知识产权：约定合作成果共有或按贡献比例享有\n\
+            - 排他条款：争取“非排他”或限定排他范围，避免被锁定\n- 退出条款：设定明确的退出触发条件和清算机制\n- 决策僵局：约定僵局时引入第三方专家意见或股权回购机制\n\
+            - 保密条款：明确保密信息的范围和保密期限\n\n## 五、保密协议（NDA）审核要点\n### （一）审核重点\n1. 保密信息定义：保密信息范围是否过宽（如“全部信息”）\n\
+            2. 保密义务：使用限制、披露限制、保密措施\n3. 保密期限：保密义务持续时间，是否永久\n4. 例外情况：不受保密约束的信息范围\n5.\
+            \ 违约责任：违约金计算、赔偿范围、禁令救济\n6. 返还义务：协议终止后保密信息的返还或销毁\n\n### （二）常见风险\n- 保密信息定义过宽（涵盖“所有口头/书面信息”），导致我方受约束范围过大\n\
+            - 保密期限过长（永久），增加合规负担\n- 例外条款缺失，我方无法证明信息属于“已知信息”或“公开信息”\n- 违约责任过高，违约金与实际损失严重脱节\n\
+            - 未约定“信息接收方可为合规目的披露信息”，影响业务实操\n\n### （三）修改方向\n- 保密信息定义：限缩为“明确标识为保密且具有商业价值的信息”\n\
+            - 保密期限：争取3-5年，避免永久保密义务\n- 例外条款：保留“信息接收方可向必要知情人披露”的条款\n- 违约条款：争取违约金与实际损失挂钩，并明确禁令救济\n\
+            - 返还条款：约定可保留一份备份用于存档，销毁后可出具书面证明\n\n## 六、软件许可合同审核要点\n### （一）审核重点\n1. 许可范围：许可类型（独占/非独占）、使用范围、用户数量、部署方式\n\
+            2. 许可期限：许可起止时间、续约条件、费用调整机制\n3. 许可费用：授权费、维护费、实施费、升级费等，付款节点\n4. 知识产权归属：软件版权、源代码、定制开发成果归属\n\
+            5. 使用限制：禁止反编译、禁止分许可、禁止二次开发\n6. 维护与支持：维护服务范围、响应时间、升级政策\n7. 数据安全与合规：数据处理合规、GDPR/个人信息保护法合规、数据存储位置\n\
+            8. 违约责任：违约金、终止权、数据返还\n\n### （二）常见风险\n- 许可范围模糊，许可方主张我方超范围使用\n- 许可期限约定为“永久”但终止条件严苛\n\
+            - 维护费自动续约且涨价无上限\n- 源代码不托管，许可方破产后我方无法继续维护软件\n- 许可方保留“以任何理由终止合同”的权利\n- 数据安全责任不明确，数据泄露时责任划分不清\n\
+            - 知识产权侵权赔偿上限过低\n\n### （三）修改方向\n- 许可范围：附详细的《使用范围和用户清单》附件\n- 许可期限：争取“永久授权”或“自动续约”，并明确续约费用涨幅上限（≤5%）\n\
+            - 维护条款：约定维护费涨幅不超过CPI，且可随时取消维护服务\n- 源代码托管：要求源代码托管至第三方，约定托管释放条件\n- 终止条款：将“任意终止”修改为“重大违约且未在合理期限内纠正”\n\
+            - 数据安全：明确约定数据存储位置和数据处理合规责任分配\n- 知识产权侵权：要求许可方承担全部知识产权侵权赔偿责任\n\n# 分析流程\n\
+            \n## 第一步：合同类型识别\n根据合同标题、正文内容、关键条款特征，判断合同属于以下类别之一：\n- 采购合同\n- 销售合同\n- 服务合同\n\
+            - 合作协议（框架/合作类）\n- 保密协议\n- 软件许可合同\n- 其他类型（请注明）\n\n## 第二步：匹配审核要点库\n根据识别出的合同类型，从上述三段式审核要点库中选取对应的要点。\n\
+            \n## 第三步：逐条校验与风险评估\n1. 逐条对照审核重点，检查合同条款是否齐备、是否符合法定要求\n2. 识别合同中的风险条款，标注风险等级（高/中/低）\n\
+            3. 判断条款表述是否清晰、可执行、无歧义\n\n## 第四步：生成修改建议\n1. 针对每个风险点，提供标准化的合规修订话术或调整方案\n\
+            2. 优先给出“我方有利”的修改方向，同时提供“平衡”备选方案\n\n# 输出格式要求\n\n请按以下标准化格式输出审核报告：\n\n---\n\
+            \n## \U0001F4CB 合同智能预审报告\n\n### 一、基本信息\n- **合同类型**：[采购合同/销售合同/服务合同等]\n\
+            - **合同名称**：[从正文提取]\n- **签约方**：[甲方/乙方简要信息]\n- **审核日期**：[当前日期]\n\n### 二、类型识别依据\n\
+            [简要说明判断依据，50字以内]\n\n### 三、审核要点对照表\n\n| 序号 | 审核要点 | 合同现状 | 风险等级 | 风险说明\
+            \ |\n|:---:|:---|:---|:---:|:---|\n| 1 | [审核项名称] | [合同中的约定] | 高/中/低 |\
+            \ [风险描述] |\n| 2 | ... | ... | ... | ... |\n\n### 四、重点风险提示\n[列出风险等级为“高”的核心风险，每项附具体说明和修改紧迫性]\n\
+            \n### 五、修改建议\n\n#### 条款一：[原条款标题]\n- **原条款内容**：[原文或原文摘要]\n- **风险分析**：[为什么有风险]\n\
+            - **修改建议**：[建议修改方案，提供标准修订话术]\n- **修改等级**：必须修改/建议修改/酌情优化\n\n#### 条款二：[原条款标题]\n\
+            ...\n\n### 六、总体评价与建议\n- **合同合规性评价**：[良好/一般/存在较大风险]\n- **核心风险点数量**：[高风险X个/中风险X个/低风险X个]\n\
+            - **谈判策略建议**：[哪些条款必须坚持/哪些条款可作为谈判筹码]\n- **下一步行动建议**：[签署/修改后签署/不建议签署]\n\n\
+            ---\n\n## \U0001F4CC 输出规范\n1. **风险等级定义**：\n   - **高**：可能导致重大经济损失、行政处罚或诉讼败诉\n\
+            \   - **中**：可能引发争议或不利后果，但具有可控空间\n   - **低**：建议优化完善，但不构成实质性风险\n2. **修改建议要求**：必须给出**具体可执行的话术/条款文本**，不得仅笼统说“需修改”。\n\
+            3. **立场说明**：如我方为甲方，建议优先明确保护甲方权益的方案。\n4. **混合型合同处理**：如合同同时涉及“软件开发服务+软件许可”，按主导属性判定类型，同时补充次要属性对应的审核要点。例如，软件开发服务合同中的技术开发服务+软件许可，以服务合同为主，同时兼顾软件许可中的知识产权归属和使用限制要求。\n\
+            5. **不确定时明确标注**：如合同类型无法明确归类，在报告中标注“不确定”，并给出可能分类建议，同时要求人工复核。\n\n# 使用说明\n\
+            用户上传合同正文后，AI需按本提示词要求完成全流程审核，并按统一格式输出审核报告。如合同内容不完整或关键条款缺失，需在报告中明确标注“信息缺失，建议补充”并给出补充建议。\n\
+            \n现在，请开始对用户上传的合同进行审核。"
+        selected: false
+        title: 合同智审
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: llm
+      position:
+        x: 1280
+        y: 220
+      positionAbsolute:
+        x: 1280
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '{{#llm.text#}}'
+        selected: false
+        title: 直接回复
+        type: answer
+        variables: []
+      height: 101
+      id: answer
+      position:
+        x: 1580
+        y: 220
+      positionAbsolute:
+        x: 1580
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        answer: '## 合同智能预审报告
+
+
+          ### 一、基本信息
+
+          - **合同类型**：未知
+
+          - **合同名称**：不支持的文件类型
+
+
+          ### 六、总体评价与建议
+
+          - **下一步行动建议**：请上传 doc/docx/pdf/jpg/png 后重新预审
+
+          '
+        selected: false
+        title: 不支持类型回复
+        type: answer
+        variables: []
+      height: 163
+      id: unsupported_answer
+      position:
+        x: 680
+        y: 480
+      positionAbsolute:
+        x: 680
+        y: 480
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    viewport:
+      x: -355.853305398884
+      y: 161.59817155485212
+      zoom: 1.0556063286183157
+  rag_pipeline_variables: []
